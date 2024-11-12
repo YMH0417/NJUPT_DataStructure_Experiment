@@ -39,5 +39,20 @@
     <ClCompile Include="exp2_3.c">
       <Filter>源文件</Filter>
     </ClCompile>
+    <ClCompile Include="exp3_1.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="exp3_2.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="exp3_3.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="exp3_4.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="exp3_5.c">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
