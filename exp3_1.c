@@ -1,149 +1,121 @@
-#include<stdio.h>
-#include<stdlib.h>
-#include <windows.h>
+#include <stdio.h>      // Include standard input-output header
+#include <stdlib.h>     // Include standard library header for dynamic memory functions
+
+// Define status codes for various conditions
 #define ERROR 0
 #define OK 1
-#define Overflow 2     //表示上溢
-#define Underflow 3    //表示下溢
-#define NotPresent 4   //表示元素不存在
-#define Duplicate 5    //表示有重复元素
-typedef int ElemType;
-typedef int Status;
+#define Overflow 2    
+#define Underflow 3   
+#define NotPresent 4  
+#define Duplicate 5   
 
+typedef int ElemType;   // Define ElemType as an integer
+typedef int Status;     // Define Status as an integer for function return types
 
-//邻接表的结构体定义
-typedef struct ENode {
-    int adjVex;             //任意顶点u相邻的顶点
-    ElemType w;             //边的权值
-    struct ENode* nextArc;  //指向下一个边结点
-}ENode;
-
+// Define structure for adjacency matrix graph
 typedef struct {
-    int n;             //图的当前顶点数
-    int e;             //图的当前边数
-    ENode** a;         //指向一维指针数组
-}LGraph;
+    ElemType** a;       // Pointer to adjacency matrix
+    int n;              // Number of nodes
+    int e;              // Number of edges
+    ElemType noEdge;    // Value representing no edge between nodes
+} mGraph;
 
+// Initialize the graph with a given number of nodes and no-edge value
+Status Init(mGraph* mg, int nSize, ElemType noEdgeValue) {
+    int i, j;
+    mg->n = nSize;                        // Set number of nodes
+    mg->e = 0;                            // Initialize edge count to zero
+    mg->noEdge = noEdgeValue;             // Set the no-edge indicator
+    mg->a = (ElemType**)malloc(nSize * sizeof(ElemType*)); // Allocate memory for adjacency matrix rows
+    if (!mg->a) return ERROR;             // Return error if memory allocation fails
 
-//邻接表的初始化
-Status Init(LGraph* lg, int nSize) {
-    int  i;
-    lg->n = nSize;
-    lg->e = 0;
-    lg->a = (ENode**)malloc(nSize * sizeof(ENode*));  //动态生成长度为n的一维指针数组
-    if (!lg->a) return ERROR;
-    else {
-        for (i = 0; i < lg->n; i++) {
-            lg->a[i] = NULL;                        //将指针数组a置空
+    for (i = 0; i < mg->n; i++) {
+        mg->a[i] = (ElemType*)malloc(nSize * sizeof(ElemType)); // Allocate memory for each row
+        for (j = 0; j < mg->n; j++) {
+            mg->a[i][j] = mg->noEdge;     // Initialize all entries to no-edge value
         }
-        return OK;
+        mg->a[i][i] = 0;                  // Set self-loop weight to zero
     }
+    return OK;                            // Return OK status
 }
 
-
-//邻接表的撤销(改成了int型，有返回值)
-int Destory(LGraph* lg) {
+// Free the memory allocated for the graph
+int Destory(mGraph* mg) {
     int i;
-    ENode* p, * q;
-    for (i = 0; i < lg->n; i++) {
-        p = lg->a[i];                 //指针p指向顶点i的单链表的第一个边结点
-        q = p;
-        while (p) {                     //释放顶点i的单链表中所有边结点
-            p = p->nextArc;
-            free(q);
-            q = p;
-        }
+    for (i = 0; i < mg->n; i++) {
+        free(mg->a[i]);                   // Free each row in the adjacency matrix
     }
-    free(lg->a);                     //释放一维指针数组a的存储空间
-    return 1;                        //改为int型函数,有返回值
+    free(mg->a);                          // Free the matrix pointer itself
+    return 1;                             // Return 1 to indicate successful destruction
 }
 
-
-//邻接表的搜索边
-Status Exist(LGraph* lg, int u, int v) {
-    ENode* p;
-    if (u < 0 || v < 0 || u > lg->n - 1 || v > lg->n - 1 || u == v) return ERROR;
-    p = lg->a[u];                   //指针p指向顶点u的单链表的第一个边结点
-    while (p != NULL && p->adjVex != v) {
-        p = p->nextArc;
-    }
-    if (!p) return ERROR;            //若未找到此边,则返回ERROR
-    else return OK;
+// Check if an edge exists between nodes u and v
+Status Exist(mGraph* mg, int u, int v) {
+    if (u < 0 || v < 0 || u > mg->n - 1 || v > mg->n - 1 || u == v || mg->a[u][v] == mg->noEdge)
+        return ERROR;                     // Return ERROR if edge does not exist
+    return OK;                            // Return OK if edge exists
 }
 
-
-//邻接表的插入边
-Status Insert(LGraph* lg, int u, int v, ElemType w) {
-    ENode* p;
-    if (u < 0 || v < 0 || u > lg->n - 1 || v > lg->n - 1 || u == v) return ERROR;
-    if (Exist(lg, u, v)) return Duplicate;  //此边已存在,返回错误
-    p = (ENode*)malloc(sizeof(ENode));   //为新的边结点分配存储空间
-    p->adjVex = v;
-    p->w = w;
-    p->nextArc = lg->a[u];             //将新的边结点插入单链表的最前面
-    lg->a[u] = p;
-    lg->e++;                            //边加1
-    return OK;
+// Insert an edge with weight w between nodes u and v
+Status Insert(mGraph* mg, int u, int v, ElemType w) {
+    if (u < 0 || v < 0 || u > mg->n - 1 || v > mg->n - 1 || u == v)
+        return ERROR;                     // Return ERROR if nodes are invalid or are the same
+    if (mg->a[u][v] != mg->noEdge)
+        return Duplicate;                 // Return Duplicate if edge already exists
+    mg->a[u][v] = w;                      // Set the weight of edge u-v
+    mg->e++;                              // Increment edge count
+    return OK;                            // Return OK status
 }
 
-
-//邻接表的删除边
-Status Remove(LGraph* lg, int u, int v) {
-    ENode* p, * q;
-    if (u < 0 || v < 0 || u > lg->n - 1 || v > lg->n - 1 || u == v) return ERROR;
-    p = lg->a[u];
-    q = NULL;
-    while (p && p->adjVex != v) {         //查找待删除边是否存在
-        q = p;
-        p = p->nextArc;
-    }
-    if (!p) return NotPresent;          //p为空,待删除边不存在
-    if (q) q->nextArc = p->nextArc;     //从单链表删除此边
-    else lg->a[u] = p->nextArc;
-    free(p);
-    lg->e--;
-    return OK;
+// Remove the edge between nodes u and v
+Status Remove(mGraph* mg, int u, int v) {
+    if (u < 0 || v < 0 || u > mg->n - 1 || v > mg->n - 1 || u == v)
+        return ERROR;                     // Return ERROR if nodes are invalid or are the same
+    if (mg->a[u][v] == mg->noEdge)
+        return NotPresent;                // Return NotPresent if edge does not exist
+    mg->a[u][v] = mg->noEdge;             // Set edge weight to no-edge value to remove it
+    mg->e--;                              // Decrement edge count
+    return OK;                            // Return OK status
 }
 
-
-
+// Main function to test graph operations
 int main() {
-    LGraph g;
-    int nSize, edge, u, v, i;
-    ElemType w;
+    mGraph g;                             // Declare a graph variable
+    int nSize, edge, u, v, i;             // Declare variables for input
+    ElemType w;                           // Variable to store edge weight
 
     printf("Please enter the number of nodes in the graph: ");
-    scanf_s("%d", &nSize);                // 输入图的节点数
-    Init(&g, nSize);                      // 初始化图
+    scanf_s("%d", &nSize);                // Input number of nodes
+    Init(&g, nSize, -1);                  // Initialize graph with no-edge value as -1
 
     printf("Please enter the number of edges: ");
-    scanf_s("%d", &edge);                 // 输入图的边数
+    scanf_s("%d", &edge);                 // Input number of edges
 
     printf("Enter edges with the order of u, v, w: \n");
     for (i = 0; i < edge; i++) {
-        scanf_s("%d%d%d", &u, &v, &w);    // 输入边的两个端点和权重
-        Insert(&g, u, v, w);              // 插入边
+        scanf_s("%d%d%d", &u, &v, &w);    // Input edge endpoints and weight
+        Insert(&g, u, v, w);              // Insert each edge into the graph
     }
 
     printf("Please enter the edge to delete:\n");
     printf("Enter the u of the edge: ");
-    scanf_s("%d", &u);                    // 输入待删除边的u
+    scanf_s("%d", &u);                    // Input node u for edge deletion
 
     printf("Enter the v of the edge: ");
-    scanf_s("%d", &v);                    // 输入待删除边的v
-    Remove(&g, u, v);                     // 删除指定的边
+    scanf_s("%d", &v);                    // Input node v for edge deletion
+    Remove(&g, u, v);                     // Remove the specified edge
 
     printf("Now searching for the edge just deleted: ");
-    if (Exist(&g, u, v))                  // 检查删除的边是否存在
+    if (Exist(&g, u, v))                  // Check if the deleted edge still exists
         printf("OK\n");
     else
         printf("ERROR\n");
 
     printf("Now destroying the graph: ");
-    if (Destory(&g))                      // 销毁图并释放内存
+    if (Destory(&g))                      // Destroy the graph and free memory
         printf("OK\n");
     else
         printf("ERROR\n");
 
-    return 0;                             // 程序结束
+    return 0;                             // End of program
 }
